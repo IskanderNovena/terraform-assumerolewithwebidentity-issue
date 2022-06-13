@@ -1,0 +1,57 @@
+name: "Terraform - WebIdentity"
+on:
+  workflow_dispatch:
+    inputs:
+      terraform_version:
+        description: "Version of Terraform to use"
+        required: true
+        default: "1.2.2" # 'latest'
+        type: string
+env:
+  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  WEB_IDENTITY_TOKEN_FILE: /tmp/web_identity_token_file
+  PLAN_FILE: terraform.plan
+jobs:
+  terraform:
+    name: "Terraform Apply Actions"
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: write
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+        with:
+          submodules: recursive
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Get OIDC Token
+        id: aws_sts_creds
+        run: |
+          curl -s -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=sts.amazonaws.com" | jq -r '.value' > $WEB_IDENTITY_TOKEN_FILE
+      - name: Check current AWS configuration
+        run: |
+          aws sts get-caller-identity || echo "[OK] - No AWS credentials found!"
+          (env | grep AWS_) || echo "[OK] - No AWS environment variables present!"
+        continue-on-error: true
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v1
+        with:
+          terraform_version: ${{ github.event.inputs.terraform_version }}
+      - name: "Terraform Init"
+        id: init
+        run: terraform init
+      - name: "Terraform Validate"
+        id: validate
+        run: terraform validate
+      - name: "Terraform Plan"
+        id: plan
+        run: terraform plan -out=$PLAN_FILE
+        env:
+          TF_LOG: TRACE
+      # - name: "Terraform Apply"
+      #   id: apply
+      #   run: terraform apply $PLAN_FILE
