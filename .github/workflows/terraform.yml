@@ -38,7 +38,7 @@ jobs:
           (env | grep AWS_) || echo "[OK] - No AWS environment variables present!"
         continue-on-error: true
       - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v1
+        uses: hashicorp/setup-terraform@v2
         with:
           terraform_version: ${{ github.event.inputs.terraform_version }}
       - name: "Terraform Init"
