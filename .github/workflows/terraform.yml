@@ -5,7 +5,7 @@ on:
       terraform_version:
         description: "Version of Terraform to use"
         required: true
-        default: "1.2.2" # 'latest'
+        default: 'latest'
         type: string
 env:
   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -41,6 +41,9 @@ jobs:
         uses: hashicorp/setup-terraform@v2
         with:
           terraform_version: ${{ github.event.inputs.terraform_version }}
+      - name: "Terraform Version"
+        id: version
+        run: terraform version
       - name: "Terraform Init"
         id: init
         run: terraform init
